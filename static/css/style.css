@@ -1,0 +1,132 @@
+/* Hlavní styly pro Balift aplikaci */
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Zvýraznění aktivního menu */
+.navbar .nav-link.active {
+    font-weight: bold;
+    color: white !important;
+}
+
+/* Styly pro karty */
+.card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Styly pro formuláře */
+.form-control:focus {
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.25);
+}
+
+/* Styly pro tlačítka v tabulkách */
+.table .btn {
+    margin: 0 2px;
+}
+
+/* Styly pro sekci přidání tréninku */
+.exercise-entry {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.exercise-entry .remove-exercise {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+    color: #dc3545;
+}
+
+/* Styly pro detail tréninku */
+.workout-detail-header {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* Styly pro tabulky s tréninky */
+.exercise-category {
+    font-weight: bold;
+    color: #495057;
+    background-color: #e9ecef;
+}
+
+/* Responsive styly pro mobilní zařízení */
+@media (max-width: 768px) {
+    .btn {
+        padding: .375rem .5rem;
+        font-size: .875rem;
+    }
+    
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .exercise-entry {
+        padding: 15px 10px;
+    }
+}
+
+/* Spinner pro načítání */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #6c757d;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Stylování datepickeru */
+.datepicker table tr td.active {
+    background-color: #6c757d !important;
+    background-image: none !important;
+}
+
+/* Stylování pro filtry */
+.filter-card {
+    margin-bottom: 1.5rem;
+}
+
+/* Styly pro přepínače kategorií cviků */
+.category-pills {
+    margin-bottom: 1rem;
+}
+
+.category-pills .btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+/* Pro opakování a váhu */
+.reps-input, .weight-input {
+    min-width: 80px;
+}
+
+/* Zvýraznění pro poslední hodnoty */
+.previous-value {
+    font-size: 12px;
+    color: #6c757d;
+    display: block;
+    margin-top: 5px;
+}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Balift - Detail tréninku{% endblock %}
+
+{% block content %}
+<div id="alerts-container"></div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Detail tréninku</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('workout_list') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Zpět na seznam
+        </a>
+        <a href="{{ url_for('workout_edit', workout_id=workout_id) }}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Upravit
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card workout-detail-header">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="far fa-calendar-alt"></i> Datum:</h5>
+                        <p class="lead" id="workout-date">Načítání...</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-tag"></i> Typ tréninku:</h5>
+                        <p class="lead" id="workout-type">Načítání...</p>
+                    </div>
+                </div>
+                <div class="row mt-3" style="display: none;">
+                    <div class="col-md-12">
+                        <h5><i class="far fa-sticky-note"></i> Poznámky:</h5>
+                        <p id="workout-notes"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <h3>Cviky</h3>
+        <div class="table-responsive">
+            <table class="table table-striped" id="exercises-table">
+                <thead>
+                    <tr>
+                        <th>Cvik</th>
+                        <th>Série</th>
+                        <th>Opakování</th>
+                        <th>Váha (kg)</th>
+                        <th>Historie</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="5" class="text-center">Načítání cviků...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/workout.js') }}"></script>
+<script>
+    $(document).ready(function() {
+        loadWorkoutDetail({{ workout_id }});
+    });
+</script>
+{% endblock %}

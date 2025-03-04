@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Balift - Seznam tréninků{% endblock %}
+
+{% block content %}
+<div id="alerts-container"></div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Seznam tréninků</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('workout_add') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Přidat trénink
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="workouts-table">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Typ</th>
+                        <th>Akce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="3" class="text-center">Načítání tréninků...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/workout.js') }}"></script>
+<script>
+    $(document).ready(function() {
+        loadWorkoutsList();
+    });
+</script>
+{% endblock %}

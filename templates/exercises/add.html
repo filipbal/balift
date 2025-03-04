@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Balift - Přidat cvik{% endblock %}
+
+{% block content %}
+<div id="alerts-container"></div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Přidat nový cvik</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('exercise_list') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Zpět na seznam
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form id="exercise-form">
+                    <div class="mb-3">
+                        <label for="exercise-name" class="form-label">Název cviku</label>
+                        <input type="text" class="form-control" id="exercise-name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="exercise-category" class="form-label">Partie</label>
+                        <select class="form-select" id="exercise-category" required>
+                            <option value="">-- Vyberte partii --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="exercise-description" class="form-label">Popis (volitelné)</label>
+                        <textarea class="form-control" id="exercise-description" rows="3"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" id="save-exercise-btn">
+                        <i class="fas fa-save"></i> Uložit cvik
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Načtení kategorií cviků
+        loadExerciseCategories('#exercise-category');
+        
+        // Event handler pro odeslání formuláře
+        $('#exercise-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            const exerciseData = {
+                name: $('#exercise-name').val(),
+                category_id: $('#exercise-category').val(),
+                description: $('#exercise-description').val()
+            };
+            
+            // Validace vstupních dat
+            if (!exerciseData.name || !exerciseData.category_id) {
+                showError('Vyplňte prosím název a partii');
+                return;
+            }
+            
+            // Deaktivace tlačítka během ukládání
+            $('#save-exercise-btn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Ukládám...');
+            
+            // Odeslání dat na server
+            $.ajax({
+                url: '/api/exercises',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(exerciseData),
+                success: function(response) {
+                    if (response.success) {
+                        showSuccess('Cvik byl úspěšně uložen');
+                        // Reset formuláře
+                        $('#exercise-form')[0].reset();
+                    } else {
+                        showError('Něco se pokazilo při ukládání cviku');
+                    }
+                    $('#save-exercise-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Uložit cvik');
+                },
+                error: function(xhr) {
+                    showError('Chyba při ukládání cviku: ' + (xhr.responseJSON?.error || 'Neznámá chyba'));
+                    $('#save-exercise-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Uložit cvik');
+                }
+            });
+        });
+        
+        // Funkce pro zobrazení úspěšné hlášky
+        function showSuccess(message) {
+            const alertHtml = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            $('#alerts-container').html(alertHtml);
+            
+            // Automatické skrytí po 5 sekundách
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+        
+        // Funkce pro zobrazení chybové hlášky
+        function showError(message) {
+            const alertHtml = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            $('#alerts-container').html(alertHtml);
+            
+            // Automatické skrytí po 5 sekundách
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+    });
+</script>
+{% endblock %}

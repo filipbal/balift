@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Balift - Aplikace pro sledování tréninků{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="jumbotron bg-light p-4 rounded">
+            <h1 class="display-4">Vítejte v aplikaci Balift</h1>
+            <p class="lead">Jednoduše sledujte své tréninky a pokroky ve cvičení</p>
+            <hr class="my-4">
+            <p>S aplikací Balift můžete snadno zaznamenávat své tréninky, přidávat cviky a sledovat svůj pokrok v průběhu času.</p>
+            <a class="btn btn-primary btn-lg" href="{{ url_for('workout_add') }}" role="button">
+                <i class="fas fa-plus"></i> Přidat nový trénink
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Poslední tréninky</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="recent-workouts-table">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Typ</th>
+                                <th>Akce</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" class="text-center">Načítání tréninků...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('workout_list') }}" class="btn btn-outline-secondary btn-sm">
+                    Zobrazit všechny tréninky
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Načtení posledních tréninků
+        $.ajax({
+            url: '/api/workouts',
+            method: 'GET',
+            success: function(workouts) {
+                const tbody = $('#recent-workouts-table tbody');
+                tbody.empty();
+                
+                if (workouts.length === 0) {
+                    tbody.append('<tr><td colspan="3" class="text-center">Žádné tréninky</td></tr>');
+                    return;
+                }
+                
+                // Zobrazení pouze posledních 5 tréninků
+                const recentWorkouts = workouts.slice(0, 5);
+                
+                recentWorkouts.forEach(function(workout) {
+                    // Formátování data v českém formátu s plným názvem měsíce
+                    const date = new Date(workout.date);
+                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                    const formattedDate = date.toLocaleDateString('cs-CZ', options);
+                    
+                    tbody.append(`
+                        <tr>
+                            <td>${formattedDate}</td>
+                            <td>${workout.type_name}</td>
+                            <td>
+                                <a href="/workouts/${workout.id}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    `);
+                });
+            },
+            error: function() {
+                const tbody = $('#recent-workouts-table tbody');
+                tbody.html('<tr><td colspan="3" class="text-center text-danger">Chyba při načítání tréninků</td></tr>');
+            }
+        });
+    });
+</script>
+{% endblock %}

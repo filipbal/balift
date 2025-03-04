@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Balift - Upravit trénink{% endblock %}
+
+{% block content %}
+<div id="alerts-container"></div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Upravit trénink</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('workout_detail', workout_id=workout_id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Zpět na detail
+        </a>
+    </div>
+</div>
+
+<form id="workout-form">
+    <input type="hidden" id="workout-id" value="{{ workout_id }}">
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Základní informace</h5>
+                    
+                    <div class="mb-3">
+                        <label for="workout-date" class="form-label">Datum tréninku</label>
+                        <input type="text" class="form-control datepicker workout-date" id="workout-date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="training-type" class="form-label">Typ tréninku</label>
+                        <select class="form-select" id="training-type" required>
+                            <option value="">-- Vyberte typ tréninku --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="workout-notes" class="form-label">Poznámky</label>
+                        <textarea class="form-control" id="workout-notes" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <h5>Cviky</h5>
+            <p class="text-secondary">Upravte cviky v tréninku</p>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <button type="button" class="btn btn-outline-primary" id="add-exercise">
+                <i class="fas fa-plus"></i> Přidat cvik
+            </button>
+        </div>
+    </div>
+    
+    <div id="exercises-container">
+        <!-- Sem se načtou existující cviky -->
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <button type="submit" class="btn btn-success" id="save-workout-btn">
+                <i class="fas fa-save"></i> Uložit změny
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/workout.js') }}"></script>
+<script>
+    $(document).ready(function() {
+        initWorkoutForm();
+        loadWorkoutForEdit({{ workout_id }});
+    });
+</script>
+{% endblock %}
