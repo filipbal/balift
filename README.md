@@ -23,5 +23,4 @@ Balift is a Flask-based web application designed to help users track their worko
 
 ## Requirements
 
-Ensure you have Python's 'flask' library installed.
-After cloning the repository, run "flask init-db".
+For local testing ensure you have Python's 'flask' library installed. After cloning the repository, run "flask init-db" inside to initialize a clean database from the schema.
