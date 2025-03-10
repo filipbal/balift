@@ -20,3 +20,8 @@ Balift is a Flask-based web application designed to help users track their worko
   - Font Awesome for icons
   - Bootstrap Datepicker for date selection
   - jQuery for AJAX requests and DOM manipulation
+
+## Requirements
+
+Ensure you have Python's 'flask' library installed.
+After cloning the repository, run "flask init-db".
