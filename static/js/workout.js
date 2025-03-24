@@ -74,7 +74,7 @@ function addExerciseToWorkout(exerciseData = null) {
         </div>
     `;
     
-    $('#exercises-container').append(exerciseHtml);
+    $('#exercises-container').prepend(exerciseHtml);
     
     // Načtení kategorií cviků
     loadExerciseCategories(`#category-${uniqueId}`, exerciseData?.category_id);
