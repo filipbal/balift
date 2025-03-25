@@ -377,5 +377,40 @@ def exercise_list():
 def exercise_add():
     return render_template('exercises/add.html')
 
+# Změna hesla
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    error = None
+    success = None
+    
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+        
+        if not current_password or not new_password or not confirm_password:
+            error = 'Všechna pole jsou povinná.'
+        elif new_password != confirm_password:
+            error = 'Nové heslo a jeho potvrzení se neshodují.'
+        elif len(new_password) < 6:
+            error = 'Nové heslo musí mít alespoň 6 znaků.'
+        else:
+            db = get_db()
+            user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+            
+            if not check_password_hash(user['password_hash'], current_password):
+                error = 'Současné heslo není správné.'
+            else:
+                # Aktualizace hesla
+                db.execute(
+                    'UPDATE users SET password_hash = ? WHERE id = ?',
+                    (generate_password_hash(new_password), session['user_id'])
+                )
+                db.commit()
+                success = 'Heslo bylo úspěšně změněno.'
+    
+    return render_template('change_password.html', error=error, success=success)
+
 if __name__ == '__main__':
     app.run(debug=True)
