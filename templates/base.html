@@ -36,6 +36,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
+                    {% if session.user_id %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('index') }}">Domů</a>
                     </li>
@@ -48,6 +49,29 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('exercise_list') }}">Cviky</a>
                     </li>
+                    {% if session.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('add_user') }}">Správa uživatelů</a>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav ms-auto">
+                    {% if session.user_id %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user"></i> {{ session.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Odhlásit se</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Přihlásit se</a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
