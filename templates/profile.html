@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Balift - Profil uživatele{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Profil uživatele</h1>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Informace o účtu</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Uživatelské jméno:</strong> {{ user.username }}</p>
+                <p><strong>Typ účtu:</strong> {% if user.is_admin %}Administrátor{% else %}Uživatel{% endif %}</p>
+                <p><strong>Datum registrace:</strong> {{ user.created_at }}</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Změna hesla</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('change_password') }}">
+                    <div class="mb-3">
+                        <label for="old_password" class="form-label">Současné heslo</label>
+                        <input type="password" class="form-control" id="old_password" name="old_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">Nové heslo</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Potvrzení nového hesla</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Změnit heslo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Statistiky tréninku</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Počet tréninků:</strong> {{ stats.workout_count }}</p>
+                <p><strong>Poslední trénink:</strong> {{ stats.last_workout_date or 'Žádný trénink' }}</p>
+                <p><strong>Nejčastější typ tréninku:</strong> {{ stats.most_common_type or 'Žádný trénink' }}</p>
+                
+                <h6 class="mt-4">Rozložení typů tréninků</h6>
+                <div class="progress-stacked">
+                    {% for type in stats.training_types %}
+                    <div class="progress" role="progressbar" aria-label="{{ type.name }}" style="width: {{ type.percentage }}%">
+                        <div class="progress-bar bg-{{ loop.cycle('primary', 'success', 'info', 'warning', 'danger', 'secondary') }}" title="{{ type.name }} ({{ type.count }} tréninků)">{{ type.percentage }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-2 small">
+                    {% for type in stats.training_types %}
+                    <span class="badge bg-{{ loop.cycle('primary', 'success', 'info', 'warning', 'danger', 'secondary') }} me-1">{{ type.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('workout_list') }}" class="btn btn-outline-primary">Zobrazit všechny tréninky</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if is_admin %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Správa uživatelů (Administrátor)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Uživatelské jméno</th>
+                                <th>Typ účtu</th>
+                                <th>Datum registrace</th>
+                                <th>Počet tréninků</th>
+                                <th>Akce</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{% if user.is_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-primary">Uživatel</span>{% endif %}</td>
+                                <td>{{ user.created_at }}</td>
+                                <td>{{ user.workout_count }}</td>
+                                <td>
+                                    <a href="{{ url_for('user_workouts', user_id=user.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-dumbbell"></i> Tréninky
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('admin_register') }}" class="btn btn-success">
+                        <i class="fas fa-user-plus"></i> Přidat nového uživatele
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Validace shody hesel
+        $('form').on('submit', function(e) {
+            const newPassword = $('#new_password').val();
+            const confirmPassword = $('#confirm_password').val();
+            
+            if (newPassword !== confirmPassword) {
+                e.preventDefault();
+                alert('Nová hesla se neshodují!');
+            }
+            
+            if (newPassword.length < 6) {
+                e.preventDefault();
+                alert('Nové heslo musí mít alespoň 6 znaků!');
+            }
+        });
+    });
+</script>
+{% endblock %}
