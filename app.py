@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, g
+from flask import Flask, render_template, request, redirect, url_for, jsonify, g, session, flash
 import sqlite3
 import os
 import datetime
+from werkzeug.security import check_password_hash, generate_password_hash
+from functools import wraps
 
 app = Flask(__name__)
 app.config.from_mapping(
@@ -42,25 +44,114 @@ def init_db_command():
     init_db()
     print('Databáze byla inicializována.')
 
+# Autentizační dekorátory
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session or not session.get('is_admin', False):
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Přihlášení
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        
+        if user is None:
+            error = 'Nesprávné uživatelské jméno.'
+        elif not check_password_hash(user['password_hash'], password):
+            error = 'Nesprávné heslo.'
+            
+        if error is None:
+            session.clear()
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['is_admin'] = bool(user['is_admin'])
+            return redirect(url_for('index'))
+    
+    return render_template('login.html', error=error)
+
+# Odhlášení
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+# Registrace nového uživatele (pouze pro adminy)
+@app.route('/admin/add-user', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_user():
+    error = None
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        is_admin = 'is_admin' in request.form
+        
+        if not username or not password:
+            error = 'Vyplňte uživatelské jméno i heslo.'
+        else:
+            db = get_db()
+            try:
+                # Kontrola, zda uživatel již existuje
+                existing = db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+                if existing:
+                    error = 'Uživatel s tímto jménem již existuje.'
+                else:
+                    # Vytvoření nového uživatele
+                    db.execute(
+                        'INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)',
+                        (username, generate_password_hash(password), is_admin)
+                    )
+                    db.commit()
+                    flash(f'Uživatel {username} byl úspěšně vytvořen.', 'success')
+                    return redirect(url_for('add_user'))
+            except Exception as e:
+                error = f'Chyba při vytváření uživatele: {str(e)}'
+    
+    # Zobrazení seznamu existujících uživatelů
+    db = get_db()
+    users = db.execute('SELECT id, username, is_admin FROM users ORDER BY username').fetchall()
+    return render_template('admin/add_user.html', error=error, users=users)
+
 # Routes pro hlavní stránku
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
-# API Routes pro tréninky
+# API Routes s omezením na přihlášené uživatele
 @app.route('/api/training_types', methods=['GET'])
+@login_required
 def get_training_types():
     db = get_db()
     types = db.execute('SELECT * FROM training_types').fetchall()
     return jsonify([dict(type) for type in types])
 
 @app.route('/api/exercise_categories', methods=['GET'])
+@login_required
 def get_exercise_categories():
     db = get_db()
     categories = db.execute('SELECT * FROM exercise_categories').fetchall()
     return jsonify([dict(category) for category in categories])
 
 @app.route('/api/exercises', methods=['GET'])
+@login_required
 def get_exercises():
     db = get_db()
     category_id = request.args.get('category_id', None)
@@ -75,45 +166,59 @@ def get_exercises():
 
     return jsonify([dict(exercise) for exercise in exercises])
 
-@app.route('/api/exercises', methods=['POST'])
-def add_exercise():
-    data = request.json
-    db = get_db()
-
-    try:
-        db.execute(
-            'INSERT INTO exercises (name, category_id, description) VALUES (?, ?, ?)',
-            (data['name'], data['category_id'], data.get('description', ''))
-        )
-        db.commit()
-        return jsonify({'success': True}), 201
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
-
 @app.route('/api/workouts', methods=['GET'])
+@login_required
 def get_workouts():
     db = get_db()
-    workouts = db.execute(
-        '''SELECT w.id, w.date, tt.name as type_name
-        FROM workouts w
-        JOIN training_types tt ON w.training_type_id = tt.id
-        ORDER BY w.date DESC'''
-    ).fetchall()
+    
+    # Admin vidí všechny tréninky, běžný uživatel jen své
+    if session.get('is_admin', False):
+        workouts = db.execute(
+            '''SELECT w.id, w.date, tt.name as type_name, u.username as username
+            FROM workouts w
+            JOIN training_types tt ON w.training_type_id = tt.id
+            LEFT JOIN users u ON w.user_id = u.id
+            ORDER BY w.date DESC'''
+        ).fetchall()
+    else:
+        workouts = db.execute(
+            '''SELECT w.id, w.date, tt.name as type_name
+            FROM workouts w
+            JOIN training_types tt ON w.training_type_id = tt.id
+            WHERE w.user_id = ?
+            ORDER BY w.date DESC''',
+            (session['user_id'],)
+        ).fetchall()
+    
     return jsonify([dict(workout) for workout in workouts])
 
 @app.route('/api/workouts/<int:workout_id>', methods=['GET'])
+@login_required
 def get_workout(workout_id):
     db = get_db()
-    workout = db.execute(
-        '''SELECT w.id, w.date, w.training_type_id, tt.name as type_name, w.notes
-        FROM workouts w
-        JOIN training_types tt ON w.training_type_id = tt.id
-        WHERE w.id = ?''',
-        (workout_id,)
-    ).fetchone()
+    
+    # Admin má přístup ke všem tréninkům, běžný uživatel jen ke svým
+    if session.get('is_admin', False):
+        workout = db.execute(
+            '''SELECT w.id, w.date, w.training_type_id, tt.name as type_name, w.notes, w.user_id,
+            u.username as username
+            FROM workouts w
+            JOIN training_types tt ON w.training_type_id = tt.id
+            LEFT JOIN users u ON w.user_id = u.id
+            WHERE w.id = ?''',
+            (workout_id,)
+        ).fetchone()
+    else:
+        workout = db.execute(
+            '''SELECT w.id, w.date, w.training_type_id, tt.name as type_name, w.notes, w.user_id
+            FROM workouts w
+            JOIN training_types tt ON w.training_type_id = tt.id
+            WHERE w.id = ? AND w.user_id = ?''',
+            (workout_id, session['user_id'])
+        ).fetchone()
 
     if workout is None:
-        return jsonify({'error': 'Workout not found'}), 404
+        return jsonify({'error': 'Trénink nebyl nalezen nebo k němu nemáte přístup'}), 404
 
     exercises = db.execute(
         '''SELECT we.id, e.id as exercise_id, e.name as exercise_name,
@@ -131,24 +236,26 @@ def get_workout(workout_id):
     return jsonify(result)
 
 @app.route('/api/workouts', methods=['POST'])
+@login_required
 def add_workout():
     data = request.json
     db = get_db()
 
     try:
-        # Kontrola formátu data
+        # Formátování data
         workout_date = data['date']
-        # Ujistíme se, že datum je ve formátu YYYY-MM-DD
         try:
             parsed_date = datetime.datetime.strptime(workout_date, '%Y-%m-%d').date()
-            # Převedeme zpět na string v požadovaném formátu
             formatted_date = parsed_date.strftime('%Y-%m-%d')
         except ValueError:
             return jsonify({'success': False, 'error': 'Neplatný formát data'}), 400
+        
+        # Přidání id přihlášeného uživatele
+        user_id = session['user_id']
 
         db.execute(
-            'INSERT INTO workouts (date, training_type_id, notes) VALUES (?, ?, ?)',
-            (formatted_date, data['training_type_id'], data.get('notes', ''))
+            'INSERT INTO workouts (date, training_type_id, notes, user_id) VALUES (?, ?, ?, ?)',
+            (formatted_date, data['training_type_id'], data.get('notes', ''), user_id)
         )
         db.commit()
         workout_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -173,17 +280,22 @@ def add_workout():
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/workouts/<int:workout_id>', methods=['PUT'])
+@login_required
 def update_workout(workout_id):
     data = request.json
     db = get_db()
 
     try:
-        # Kontrola formátu data
+        # Kontrola vlastnictví
+        if not session.get('is_admin', False):
+            owner = db.execute('SELECT user_id FROM workouts WHERE id = ?', (workout_id,)).fetchone()
+            if not owner or owner['user_id'] != session['user_id']:
+                return jsonify({'success': False, 'error': 'Nemáte oprávnění upravovat tento trénink'}), 403
+        
+        # Formátování data
         workout_date = data['date']
-        # Ujistíme se, že datum je ve formátu YYYY-MM-DD
         try:
             parsed_date = datetime.datetime.strptime(workout_date, '%Y-%m-%d').date()
-            # Převedeme zpět na string v požadovaném formátu
             formatted_date = parsed_date.strftime('%Y-%m-%d')
         except ValueError:
             return jsonify({'success': False, 'error': 'Neplatný formát data'}), 400
@@ -193,10 +305,10 @@ def update_workout(workout_id):
             (formatted_date, data['training_type_id'], data.get('notes', ''), workout_id)
         )
 
-        # Smazat existující cviky v tréninku
+        # Smazání stávajících cviků
         db.execute('DELETE FROM workout_exercises WHERE workout_id = ?', (workout_id,))
 
-        # Přidat nové cviky
+        # Přidání nových cviků
         for exercise in data.get('exercises', []):
             db.execute(
                 '''INSERT INTO workout_exercises
@@ -217,10 +329,17 @@ def update_workout(workout_id):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/workouts/<int:workout_id>', methods=['DELETE'])
+@login_required
 def delete_workout(workout_id):
     db = get_db()
 
     try:
+        # Kontrola vlastnictví
+        if not session.get('is_admin', False):
+            owner = db.execute('SELECT user_id FROM workouts WHERE id = ?', (workout_id,)).fetchone()
+            if not owner or owner['user_id'] != session['user_id']:
+                return jsonify({'success': False, 'error': 'Nemáte oprávnění smazat tento trénink'}), 403
+        
         db.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
         db.commit()
         return jsonify({'success': True}), 200
@@ -229,65 +348,34 @@ def delete_workout(workout_id):
 
 # Routes pro zobrazení šablon
 @app.route('/workouts')
+@login_required
 def workout_list():
     return render_template('workouts/list.html')
 
 @app.route('/workouts/add')
+@login_required
 def workout_add():
     return render_template('workouts/add.html')
 
 @app.route('/workouts/<int:workout_id>')
+@login_required
 def workout_detail(workout_id):
     return render_template('workouts/detail.html', workout_id=workout_id)
 
 @app.route('/workouts/<int:workout_id>/edit')
+@login_required
 def workout_edit(workout_id):
     return render_template('workouts/edit.html', workout_id=workout_id)
 
-@app.route('/api/exercises/<int:exercise_id>', methods=['GET'])
-def get_exercise(exercise_id):
-    db = get_db()
-    exercise = db.execute(
-        '''SELECT e.id, e.name, e.category_id, e.description, ec.name as category_name
-        FROM exercises e
-        JOIN exercise_categories ec ON e.category_id = ec.id
-        WHERE e.id = ?''',
-        (exercise_id,)
-    ).fetchone()
-
-    if exercise is None:
-        return jsonify({'error': 'Exercise not found'}), 404
-
-    return jsonify(dict(exercise))
-
 @app.route('/exercises')
+@login_required
 def exercise_list():
     return render_template('exercises/list.html')
 
 @app.route('/exercises/add')
+@login_required
 def exercise_add():
     return render_template('exercises/add.html')
-
-@app.route('/api/exercises/<int:exercise_id>', methods=['DELETE'])
-def delete_exercise(exercise_id):
-    db = get_db()
-
-    try:
-        # Nejprve ověřit, zda cvik není používán v nějakém tréninku
-        workout_count = db.execute(
-            'SELECT COUNT(*) FROM workout_exercises WHERE exercise_id = ?',
-            (exercise_id,)
-        ).fetchone()[0]
-
-        if workout_count > 0:
-            return jsonify({'success': False, 'error': 'Nelze smazat cvik, který je použit v tréninku'}), 400
-
-        # Pokud cvik není používán, provést smazání
-        db.execute('DELETE FROM exercises WHERE id = ?', (exercise_id,))
-        db.commit()
-        return jsonify({'success': True}), 200
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
