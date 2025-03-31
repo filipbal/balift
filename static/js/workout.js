@@ -299,8 +299,12 @@ function loadWorkoutForEdit(workoutId) {
             // Nejprve vymažeme existující cviky
             $('#exercises-container').empty();
             
+            // Obrátíme pořadí cviků, aby odpovídalo pořadí v detailu tréninku
+            // (nejnovější nahoře)
+            const reversedExercises = [...workout.exercises].reverse();
+            
             // Přidání cviků - pro každý cvik vytvoříme neměnné pole pro název a partii
-            workout.exercises.forEach(function(exercise) {
+            reversedExercises.forEach(function(exercise) {
                 // Přidáme k objektu cviku také kategorii, pokud ji známe
                 if (exercise.category_name) {
                     addExistingExerciseToWorkout(exercise);
