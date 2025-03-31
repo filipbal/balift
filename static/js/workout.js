@@ -60,15 +60,15 @@ function addExerciseToWorkout() {
             <div class="row">
                 <div class="col-md-4">
                     <label for="sets-${uniqueId}" class="form-label">Počet sérií</label>
-                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="1" required>
+                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="0">
                 </div>
                 <div class="col-md-4">
                     <label for="reps-${uniqueId}" class="form-label">Opakování</label>
-                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" required placeholder="např. 10-8-6">
+                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" placeholder="např. 10-8-6">
                 </div>
                 <div class="col-md-4">
                     <label for="weight-${uniqueId}" class="form-label">Váha (kg)</label>
-                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" required placeholder="např. 60-70-80">
+                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" placeholder="např. 60-70-80">
                 </div>
             </div>
         </div>
@@ -117,15 +117,15 @@ function addExistingExerciseToWorkout(exercise) {
             <div class="row">
                 <div class="col-md-4">
                     <label for="sets-${uniqueId}" class="form-label">Počet sérií</label>
-                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="1" required value="${exercise.sets}">
+                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="0" value="${exercise.sets || ''}">
                 </div>
                 <div class="col-md-4">
                     <label for="reps-${uniqueId}" class="form-label">Opakování</label>
-                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" required placeholder="např. 10-8-6" value="${exercise.reps}">
+                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" placeholder="např. 10-8-6" value="${exercise.reps || ''}">
                 </div>
                 <div class="col-md-4">
                     <label for="weight-${uniqueId}" class="form-label">Váha (kg)</label>
-                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" required placeholder="např. 60-70-80" value="${exercise.weight}">
+                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" placeholder="např. 60-70-80" value="${exercise.weight || ''}">
                 </div>
             </div>
         </div>
@@ -205,7 +205,7 @@ function loadExercisesByCategory(categoryId, selectElement, selectedValue = null
     });
 }
 
-// Funkce pro sběr dat z formuláře
+// Vylepšená funkce pro sběr dat z formuláře
 function collectWorkoutData() {
     const rawDate = $('#workout-date').val();
     const formattedDate = dateToServerFormat(rawDate);
@@ -217,16 +217,20 @@ function collectWorkoutData() {
         exercises: []
     };
     
-    // Sběr dat o cvicích
+    // Sběr dat o cvicích - s výchozí hodnotou "0" pro prázdná pole
     $('.exercise-entry').each(function() {
         const exerciseId = $(this).find('input[name="exercise_id"], .exercise-select').val();
         
         if (exerciseId) {
+            const sets = $(this).find('input[name="sets"]').val() || "0";
+            const reps = $(this).find('input[name="reps"]').val() || "0";
+            const weight = $(this).find('input[name="weight"]').val() || "0";
+            
             workoutData.exercises.push({
                 exercise_id: exerciseId,
-                sets: $(this).find('input[name="sets"]').val(),
-                reps: $(this).find('input[name="reps"]').val(),
-                weight: $(this).find('input[name="weight"]').val()
+                sets: sets,
+                reps: reps,
+                weight: weight
             });
         }
     });
@@ -234,7 +238,7 @@ function collectWorkoutData() {
     return workoutData;
 }
 
-// Funkce pro uložení tréninku (nový nebo editace)
+// Vylepšená funkce pro uložení tréninku
 function saveWorkout() {
     const workoutData = collectWorkoutData();
     const workoutId = $('#workout-id').val();
@@ -248,6 +252,22 @@ function saveWorkout() {
     if (workoutData.exercises.length === 0) {
         showError('Přidejte alespoň jeden cvik');
         return;
+    }
+    
+    // Kontrola nevyplněných dat - pokud jsou některá pole "0", zobrazíme varování
+    const incompleteExercises = workoutData.exercises.filter(exercise => 
+        exercise.sets === "0" || exercise.reps === "0" || exercise.weight === "0");
+    
+    if (incompleteExercises.length > 0) {
+        // Místo chyby zobrazíme potvrzovací dialog
+        const confirmSave = confirm(
+            `U ${incompleteExercises.length} cviků chybí některé údaje (série, opakování nebo váha). ` +
+            `Pro nevyplněné údaje bude použita hodnota "0". Chcete trénink přesto uložit?`
+        );
+        
+        if (!confirmSave) {
+            return; // Uživatel se rozhodl data doplnit
+        }
     }
     
     // Zobrazení indikátoru načítání
