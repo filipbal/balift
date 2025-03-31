@@ -63,8 +63,8 @@ function addExerciseToWorkout() {
                     <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="0">
                 </div>
                 <div class="col-md-4">
-                    <label for="reps-${uniqueId}" class="form-label">Opakování</label>
-                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" placeholder="např. 10-8-6">
+                    <label for="reps-${uniqueId}" class="form-label">Opakování/Čas <i class="fas fa-clock text-muted"></i></label>
+                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" placeholder="např. 10-8-6 nebo 60s-45s-30s">
                 </div>
                 <div class="col-md-4">
                     <label for="weight-${uniqueId}" class="form-label">Váha (kg)</label>
@@ -120,8 +120,8 @@ function addExistingExerciseToWorkout(exercise) {
                     <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="0" value="${exercise.sets || ''}">
                 </div>
                 <div class="col-md-4">
-                    <label for="reps-${uniqueId}" class="form-label">Opakování</label>
-                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" placeholder="např. 10-8-6" value="${exercise.reps || ''}">
+                    <label for="reps-${uniqueId}" class="form-label">Opakování/Čas <i class="fas fa-clock text-muted"></i></label>
+                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" placeholder="např. 10-8-6 nebo 60s-45s-30s" value="${exercise.reps || ''}">
                 </div>
                 <div class="col-md-4">
                     <label for="weight-${uniqueId}" class="form-label">Váha (kg)</label>
@@ -261,7 +261,7 @@ function saveWorkout() {
     if (incompleteExercises.length > 0) {
         // Místo chyby zobrazíme potvrzovací dialog
         const confirmSave = confirm(
-            `U ${incompleteExercises.length} cviků chybí některé údaje (série, opakování nebo váha). ` +
+            `U ${incompleteExercises.length} z cviků chybí některé údaje. ` +
             `Pro nevyplněné údaje bude použita hodnota "0". Chcete trénink přesto uložit?`
         );
         
