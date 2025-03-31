@@ -16,6 +16,9 @@
         <a href="{{ url_for('workout_edit', workout_id=workout_id) }}" class="btn btn-warning">
             <i class="fas fa-edit"></i> Upravit
         </a>
+		<button id="copy-workout-btn" class="btn btn-success" data-workout-id="{{ workout_id }}">
+			<i class="fas fa-copy"></i> Kopírovat
+		</button>
     </div>
 </div>
 
@@ -73,8 +76,14 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/workout.js') }}"></script>
 <script>
-    $(document).ready(function() {
-        loadWorkoutDetail({{ workout_id }});
+	$(document).ready(function() {
+    loadWorkoutDetail({{ workout_id }});
+    
+    // Event handler pro kopírování tréninku
+    $('#copy-workout-btn').on('click', function() {
+        const workoutId = $(this).data('workout-id');
+        copyWorkout(workoutId);
     });
+});
 </script>
 {% endblock %}

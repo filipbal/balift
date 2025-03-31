@@ -412,5 +412,61 @@ def change_password():
     
     return render_template('change_password.html', error=error, success=success)
 
+# Kopírování tréninku
+@app.route('/api/workouts/<int:workout_id>/copy', methods=['POST'])
+def copy_workout(workout_id):
+    db = get_db()
+    
+    try:
+        # Načtení zdrojového tréninku
+        source_workout = db.execute(
+            'SELECT date, training_type_id, notes, user_id FROM workouts WHERE id = ?',
+            (workout_id,)
+        ).fetchone()
+        
+        if source_workout is None:
+            return jsonify({'success': False, 'error': 'Zdrojový trénink nenalezen'}), 404
+        
+        # Použijeme stejné user_id jako má původní trénink
+        # Nebo session['user_id'] pokud chceme vždy vytvářet kopii pro přihlášeného uživatele
+        user_id = source_workout['user_id']  # nebo session.get('user_id')
+        
+        # Vložení nového tréninku s dnešním datem
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        db.execute(
+            'INSERT INTO workouts (date, training_type_id, notes, user_id) VALUES (?, ?, ?, ?)',
+            (today, source_workout['training_type_id'], source_workout['notes'], user_id)
+        )
+        db.commit()
+        
+        # Získání ID nového tréninku
+        new_workout_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        
+        # Kopírování cviků
+        exercises = db.execute(
+            'SELECT exercise_id, sets, reps, weight FROM workout_exercises WHERE workout_id = ?',
+            (workout_id,)
+        ).fetchall()
+        
+        for exercise in exercises:
+            db.execute(
+                '''INSERT INTO workout_exercises
+                (workout_id, exercise_id, sets, reps, weight)
+                VALUES (?, ?, ?, ?, ?)''',
+                (
+                    new_workout_id,
+                    exercise['exercise_id'],
+                    exercise['sets'],
+                    exercise['reps'],
+                    exercise['weight']
+                )
+            )
+        
+        db.commit()
+        return jsonify({'success': True, 'id': new_workout_id}), 201
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 if __name__ == '__main__':
     app.run(debug=True)

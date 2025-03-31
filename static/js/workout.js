@@ -475,3 +475,25 @@ function deleteWorkout(workoutId) {
         });
     }
 }
+
+// Funkce pro kopírování tréninku
+function copyWorkout(workoutId) {
+    if (confirm('Opravdu chcete vytvořit kopii tohoto tréninku? Kopie bude vytvořena s dnešním datem.')) {
+        $.ajax({
+            url: `/api/workouts/${workoutId}/copy`,
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    showSuccess('Trénink byl úspěšně zkopírován');
+                    // Přesměrování na detail nového tréninku
+                    window.location.href = `/workouts/${response.id}`;
+                } else {
+                    showError('Něco se pokazilo při kopírování tréninku');
+                }
+            },
+            error: function(xhr) {
+                showError('Chyba při kopírování tréninku: ' + (xhr.responseJSON?.error || 'Neznámá chyba'));
+            }
+        });
+    }
+}
