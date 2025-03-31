@@ -7,7 +7,7 @@ let exerciseCounter = 0;
 
 // Funkce pro inicializaci stránky přidání/editace tréninku
 function initWorkoutForm() {
-    // Inicializace datepickeru pro datum tréninku - explicitní nastavení formátu a lokalizace
+    // Inicializace datepickeru pro datum tréninku
     $('.workout-date').datepicker({
         language: 'cs',
         format: 'yyyy-mm-dd',
@@ -35,8 +35,8 @@ function initWorkoutForm() {
     });
 }
 
-// Funkce pro přidání nového cviku do tréninku
-function addExerciseToWorkout(exerciseData = null) {
+// Funkce pro přidání nového cviku do tréninku (pouze pro nové cviky)
+function addExerciseToWorkout() {
     const uniqueId = exerciseCounter++;
     const exerciseHtml = `
         <div class="exercise-entry" id="exercise-${uniqueId}">
@@ -60,15 +60,15 @@ function addExerciseToWorkout(exerciseData = null) {
             <div class="row">
                 <div class="col-md-4">
                     <label for="sets-${uniqueId}" class="form-label">Počet sérií</label>
-                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="1" required value="${exerciseData?.sets || ''}">
+                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="1" required>
                 </div>
                 <div class="col-md-4">
                     <label for="reps-${uniqueId}" class="form-label">Opakování</label>
-                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" required placeholder="např. 10-8-6" value="${exerciseData?.reps || ''}">
+                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" required placeholder="např. 10-8-6">
                 </div>
                 <div class="col-md-4">
                     <label for="weight-${uniqueId}" class="form-label">Váha (kg)</label>
-                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" required placeholder="např. 60-70-80" value="${exerciseData?.weight || ''}">
+                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" required placeholder="např. 60-70-80">
                 </div>
             </div>
         </div>
@@ -77,7 +77,7 @@ function addExerciseToWorkout(exerciseData = null) {
     $('#exercises-container').prepend(exerciseHtml);
     
     // Načtení kategorií cviků
-    loadExerciseCategories(`#category-${uniqueId}`, exerciseData?.category_id);
+    loadExerciseCategories(`#category-${uniqueId}`);
     
     // Event handler pro změnu kategorie
     $(`#category-${uniqueId}`).on('change', function() {
@@ -90,23 +90,125 @@ function addExerciseToWorkout(exerciseData = null) {
         const exerciseId = $(this).data('exercise-id');
         $(`#exercise-${exerciseId}`).remove();
     });
+}
+
+// Funkce pro přidání existujícího cviku do formuláře (pro editaci, s neměnným názvem a partií)
+function addExistingExerciseToWorkout(exercise) {
+    const uniqueId = exerciseCounter++;
     
-    // Pokud existují data cviku, nastavíme je
-    if (exerciseData && exerciseData.category_id) {
-        // Načtení cviků pro danou kategorii a nastavení vybraného cviku
-        setTimeout(() => {
-            loadExercisesByCategory(exerciseData.category_id, `#exercise-select-${uniqueId}`, exerciseData.exercise_id);
-        }, 100);
+    // HTML s neměnnými poli pro název cviku a partii (použijeme skrytá pole pro hodnoty)
+    const exerciseHtml = `
+        <div class="exercise-entry" id="exercise-${uniqueId}">
+            <span class="remove-exercise" data-exercise-id="${uniqueId}">
+                <i class="fas fa-times"></i>
+            </span>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Partie</label>
+                    <input type="text" class="form-control" value="${exercise.category_name}" readonly>
+                    <input type="hidden" name="category_id" value="${exercise.category_id}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Cvik</label>
+                    <input type="text" class="form-control" value="${exercise.exercise_name}" readonly>
+                    <input type="hidden" class="exercise-select" name="exercise_id" value="${exercise.exercise_id}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="sets-${uniqueId}" class="form-label">Počet sérií</label>
+                    <input type="number" class="form-control" id="sets-${uniqueId}" name="sets" min="1" required value="${exercise.sets}">
+                </div>
+                <div class="col-md-4">
+                    <label for="reps-${uniqueId}" class="form-label">Opakování</label>
+                    <input type="text" class="form-control" id="reps-${uniqueId}" name="reps" required placeholder="např. 10-8-6" value="${exercise.reps}">
+                </div>
+                <div class="col-md-4">
+                    <label for="weight-${uniqueId}" class="form-label">Váha (kg)</label>
+                    <input type="text" class="form-control" id="weight-${uniqueId}" name="weight" required placeholder="např. 60-70-80" value="${exercise.weight}">
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('#exercises-container').prepend(exerciseHtml);
+    
+    // Event handler pro odstranění cviku
+    $(`#exercise-${uniqueId} .remove-exercise`).on('click', function() {
+        const exerciseId = $(this).data('exercise-id');
+        $(`#exercise-${exerciseId}`).remove();
+    });
+}
+
+// Funkce pro načtení kategorií cviků
+function loadExerciseCategories(selectElement, selectedValue = null) {
+    $.ajax({
+        url: '/api/exercise_categories',
+        method: 'GET',
+        success: function(data) {
+            const select = $(selectElement);
+            select.empty();
+            select.append('<option value="">-- Vyberte partii --</option>');
+            
+            data.forEach(function(category) {
+                const option = $('<option></option>')
+                    .attr('value', category.id)
+                    .text(category.name);
+                
+                if (selectedValue && selectedValue == category.id) {
+                    option.attr('selected', 'selected');
+                }
+                
+                select.append(option);
+            });
+        },
+        error: function() {
+            showError('Nepodařilo se načíst kategorie cviků');
+        }
+    });
+}
+
+// Funkce pro načtení cviků podle kategorie
+function loadExercisesByCategory(categoryId, selectElement, selectedValue = null) {
+    if (!categoryId) {
+        const select = $(selectElement);
+        select.empty();
+        select.append('<option value="">-- Nejprve vyberte partii --</option>');
+        return;
     }
+    
+    const url = `/api/exercises?category_id=${categoryId}`;
+    
+    $.ajax({
+        url: url,
+        method: 'GET',
+        success: function(data) {
+            const select = $(selectElement);
+            select.empty();
+            select.append('<option value="">-- Vyberte cvik --</option>');
+            
+            data.forEach(function(exercise) {
+                const option = $('<option></option>')
+                    .attr('value', exercise.id)
+                    .text(exercise.name);
+                
+                if (selectedValue && selectedValue == exercise.id) {
+                    option.attr('selected', 'selected');
+                }
+                
+                select.append(option);
+            });
+        },
+        error: function() {
+            showError('Nepodařilo se načíst cviky');
+        }
+    });
 }
 
 // Funkce pro sběr dat z formuláře
 function collectWorkoutData() {
     const rawDate = $('#workout-date').val();
-    // Ujistíme se, že datum je ve správném formátu (YYYY-MM-DD)
     const formattedDate = dateToServerFormat(rawDate);
-    
-    console.log('Odesílané datum:', formattedDate, 'Původní hodnota:', rawDate);
     
     const workoutData = {
         date: formattedDate,
@@ -117,7 +219,7 @@ function collectWorkoutData() {
     
     // Sběr dat o cvicích
     $('.exercise-entry').each(function() {
-        const exerciseId = $(this).find('.exercise-select').val();
+        const exerciseId = $(this).find('input[name="exercise_id"], .exercise-select').val();
         
         if (exerciseId) {
             workoutData.exercises.push({
@@ -167,34 +269,14 @@ function saveWorkout() {
                 window.location.href = `/workouts/${redirectId}`;
             } else {
                 showError('Něco se pokazilo při ukládání tréninku');
-                $('#save-workout-btn').prop('disabled', false).html('Uložit trénink');
+                $('#save-workout-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Uložit trénink');
             }
         },
         error: function(xhr) {
             showError('Chyba při ukládání tréninku: ' + (xhr.responseJSON?.error || 'Neznámá chyba'));
-            $('#save-workout-btn').prop('disabled', false).html('Uložit trénink');
+            $('#save-workout-btn').prop('disabled', false).html('<i class="fas fa-save"></i> Uložit trénink');
         }
     });
-}
-
-// Funkce pro získání ID kategorie pro daný cvik
-function getCategoryIdForExercise(exerciseId) {
-    let categoryId = null;
-    
-    // Synchronní AJAX volání pro získání kategorie
-    $.ajax({
-        url: `/api/exercises/${exerciseId}`,
-        method: 'GET',
-        async: false,  // Důležité pro správné určení kategorie před vykreslením
-        success: function(exercise) {
-            categoryId = exercise.category_id;
-        },
-        error: function() {
-            console.error('Nepodařilo se načíst data o cviku');
-        }
-    });
-    
-    return categoryId;
 }
 
 // Funkce pro načtení detailu tréninku (pro editaci)
@@ -204,12 +286,9 @@ function loadWorkoutForEdit(workoutId) {
         method: 'GET',
         success: function(workout) {
             // Nastavení základních údajů o tréninku
-            // Zajistíme, že datum je ve formátu, který datepicker očekává (YYYY-MM-DD)
             const formattedDate = dateToServerFormat(workout.date);
             $('#workout-date').val(formattedDate);
             $('#workout-id').val(workout.id);
-            
-            console.log('Načtené datum:', workout.date, 'Formátované:', formattedDate);
             
             // Načtení typu tréninku a nastavení vybraného
             loadTrainingTypes('#training-type', workout.training_type_id);
@@ -217,18 +296,18 @@ function loadWorkoutForEdit(workoutId) {
             // Nastavení poznámek
             $('#workout-notes').val(workout.notes);
             
-            // Přidání cviků
+            // Nejprve vymažeme existující cviky
+            $('#exercises-container').empty();
+            
+            // Přidání cviků - pro každý cvik vytvoříme neměnné pole pro název a partii
             workout.exercises.forEach(function(exercise) {
-                // Pro každý cvik nejprve získáme jeho kategorii
-                const categoryId = getCategoryIdForExercise(exercise.exercise_id);
-                
-                addExerciseToWorkout({
-                    exercise_id: exercise.exercise_id,
-                    category_id: categoryId,
-                    sets: exercise.sets,
-                    reps: exercise.reps,
-                    weight: exercise.weight
-                });
+                // Přidáme k objektu cviku také kategorii, pokud ji známe
+                if (exercise.category_name) {
+                    addExistingExerciseToWorkout(exercise);
+                } else {
+                    // V případě chybějících dat zobrazíme chybovou hlášku
+                    showError('Nepodařilo se načíst některé cviky v tréninku');
+                }
             });
         },
         error: function() {
@@ -244,7 +323,6 @@ function loadWorkoutDetail(workoutId) {
         method: 'GET',
         success: function(workout) {
             // Nastavení základních údajů o tréninku
-            // Formátování data v českém formátu
             const formattedDate = formatDate(workout.date);
             $('#workout-date').text(formattedDate);
             $('#workout-type').text(workout.type_name);
