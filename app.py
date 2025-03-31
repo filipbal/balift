@@ -166,18 +166,18 @@ def get_exercises():
 
     return jsonify([dict(exercise) for exercise in exercises])
 
+# Výpis seznamu všech tréninků
 @app.route('/api/workouts', methods=['GET'])
-@login_required
 def get_workouts():
     db = get_db()
     
-    # Admin vidí všechny tréninky, běžný uživatel jen své
-    if session.get('is_admin', False):
+    # Pro admina zobrazíme všechny tréninky, pro běžného uživatele jen jeho
+    if session.get('is_admin'):
         workouts = db.execute(
             '''SELECT w.id, w.date, tt.name as type_name, u.username as username
             FROM workouts w
             JOIN training_types tt ON w.training_type_id = tt.id
-            LEFT JOIN users u ON w.user_id = u.id
+            JOIN users u ON w.user_id = u.id
             ORDER BY w.date DESC'''
         ).fetchall()
     else:
@@ -191,7 +191,6 @@ def get_workouts():
         ).fetchall()
     
     return jsonify([dict(workout) for workout in workouts])
-
 @app.route('/api/workouts/<int:workout_id>', methods=['GET'])
 @login_required
 def get_workout(workout_id):

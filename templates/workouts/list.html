@@ -23,7 +23,10 @@
                 <thead>
                     <tr>
                         <th>Datum</th>
-                        <th>Typ</th>
+						<th>Typ</th>
+						{% if session.get('is_admin') %}
+        				<th>Uživatel</th>
+        				{% endif %}
                         <th>Akce</th>
                     </tr>
                 </thead>

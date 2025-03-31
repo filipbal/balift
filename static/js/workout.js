@@ -420,27 +420,36 @@ function loadWorkoutsList() {
             }
             
             workouts.forEach(function(workout) {
-                // Formátování data v českém formátu
-                const formattedDate = formatDate(workout.date);
-                
-                tbody.append(`
-                    <tr>
-                        <td>${formattedDate}</td>
-                        <td>${workout.type_name}</td>
-                        <td>
-                            <a href="/workouts/${workout.id}" class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="/workouts/${workout.id}/edit" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button class="btn btn-sm btn-danger delete-workout" data-workout-id="${workout.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `);
-            });
+				// Formátování data v českém formátu
+				const formattedDate = formatDate(workout.date);
+				
+				let row = `
+					<tr>
+						<td>${formattedDate}</td>
+						<td>${workout.type_name}</td>`;
+				
+				// Přidáme sloupec s uživatelem pouze pro adminy
+				if (workout.username) {
+					row += `<td>${workout.username}</td>`;
+				}
+				
+				row += `
+						<td>
+							<a href="/workouts/${workout.id}" class="btn btn-sm btn-info">
+								<i class="fas fa-eye"></i>
+							</a>
+							<a href="/workouts/${workout.id}/edit" class="btn btn-sm btn-warning">
+								<i class="fas fa-edit"></i>
+							</a>
+							<button class="btn btn-sm btn-danger delete-workout" data-workout-id="${workout.id}">
+								<i class="fas fa-trash"></i>
+							</button>
+						</td>
+					</tr>
+				`;
+				
+				tbody.append(row);
+			});
             
             // Event handler pro smazání tréninku
             $('.delete-workout').on('click', function() {
