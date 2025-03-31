@@ -344,43 +344,24 @@ function loadWorkoutDetail(workoutId) {
             if (workout.exercises.length === 0) {
                 exercisesTable.append('<tr><td colspan="5" class="text-center">Žádné cviky</td></tr>');
             } else {
-                // Seskupení cviků podle kategorií
-                const exercisesByCategory = {};
-                
+                // Vykreslení cviků v pořadí, v jakém přišly z API
+                // (bez obracení a bez seskupování podle kategorií)
                 workout.exercises.forEach(function(exercise) {
-                    if (!exercisesByCategory[exercise.category_name]) {
-                        exercisesByCategory[exercise.category_name] = [];
-                    }
-                    exercisesByCategory[exercise.category_name].push(exercise);
-                });
-                
-                // Vykreslení cviků po kategoriích
-                Object.keys(exercisesByCategory).forEach(function(category) {
-                    // Nadpis kategorie
                     exercisesTable.append(`
-                        <tr class="exercise-category">
-                            <td colspan="5">${category}</td>
+                        <tr>
+                            <td>${exercise.exercise_name} <small class="text-muted">(${exercise.category_name})</small></td>
+                            <td>${exercise.sets}</td>
+                            <td>${exercise.reps}</td>
+                            <td>${exercise.weight}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary view-history" 
+                                        data-exercise-id="${exercise.exercise_id}" 
+                                        data-exercise-name="${exercise.exercise_name}">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                            </td>
                         </tr>
                     `);
-                    
-                    // Cviky v kategorii
-                    exercisesByCategory[category].forEach(function(exercise) {
-                        exercisesTable.append(`
-                            <tr>
-                                <td>${exercise.exercise_name}</td>
-                                <td>${exercise.sets}</td>
-                                <td>${exercise.reps}</td>
-                                <td>${exercise.weight}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-secondary view-history" 
-                                            data-exercise-id="${exercise.exercise_id}" 
-                                            data-exercise-name="${exercise.exercise_name}">
-                                        <i class="fas fa-history"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `);
-                    });
                 });
             }
             
