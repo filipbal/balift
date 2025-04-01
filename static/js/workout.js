@@ -249,9 +249,15 @@ function saveWorkout() {
         return;
     }
     
+    // Varování místo zabránění uložení pokud nejsou přidány cviky
     if (workoutData.exercises.length === 0) {
-        showError('Přidejte alespoň jeden cvik');
-        return;
+        const confirmSave = confirm(
+            'Tento trénink neobsahuje žádné cviky. Chcete ho přesto uložit?'
+        );
+        
+        if (!confirmSave) {
+            return; // Uživatel se rozhodl přidat cviky
+        }
     }
     
     // Kontrola nevyplněných dat - pokud jsou některá pole "0", zobrazíme varování
